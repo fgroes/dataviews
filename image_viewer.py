@@ -35,8 +35,14 @@ class ImageViewerCentralWidget(QtGui.QWidget):
         self._image_viewer = ImageViewerWidget(self)
         self._central_layout = QtGui.QVBoxLayout()
         self._central_layout.addWidget(self._image_viewer)
-        self._central_layout.addWidget(QtGui.QPushButton("Test"))
+        self._resolution_slider = QtGui.QSlider(Qt.Horizontal)
+        self._resolution_slider.setValue(100)
+        self._resolution_slider.valueChanged.connect(self._on_resolution_changed)
+        self._central_layout.addWidget(self._resolution_slider)
         self.setLayout(self._central_layout)
+
+    def _on_resolution_changed(self, value):
+        self._image_viewer.resolution_scale = 1.0 * value / 100
 
     @property
     def image(self):
@@ -60,7 +66,7 @@ class ImageViewerWidget(QtGui.QWidget):
         self._mouse_image_release_pos = None
         self._source_rect = None
         self._window_zoom_active = False
-        self._max_pixels = 50
+        self._resolution_scale = 1.0
 
     def _init_ui(self):
         pass
@@ -75,6 +81,15 @@ class ImageViewerWidget(QtGui.QWidget):
         self._image_source = value
         self.repaint()
 
+    @property
+    def resolution_scale(self):
+        return self._resolution_scale
+
+    @resolution_scale.setter
+    def resolution_scale(self, value):
+        self._resolution_scale = value
+        self.repaint()
+
     def paintEvent(self, e):
         if self._image_source:
             qp = QtGui.QPainter()
@@ -85,12 +100,14 @@ class ImageViewerWidget(QtGui.QWidget):
             if not self._source_rect:
                 self._source_rect = QtCore.QRect(0, 0, self._image.width(), self._image.height())
             r = self._source_rect
-            if self._max_pixels < r.width():
-                xscale = 1.0 * self._max_pixels / r.width()
+            hres = self._resolution_scale * g.width()
+            if hres < r.width():
+                xscale = 1.0 * hres / r.width()
             else:
                 xscale = 1.0
-            if self._max_pixels < r.height():
-                yscale = 1.0 * self._max_pixels / r.height()
+            vres = self._resolution_scale * g.height()
+            if vres < r.height():
+                yscale = 1.0 * vres / r.height()
             else:
                 yscale = 1.0
             scaled_width = int(np.round(xscale * self._image.width()))
